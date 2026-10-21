@@ -1,0 +1,16 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Environment and OS
+.DS_Store
+.env
+.venv
+env/
+venv/
+
+# AI Behavior Lab results (keep directory, ignore bulky runs if desired)
+results/runs/
