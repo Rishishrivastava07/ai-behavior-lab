@@ -1,16 +1,13 @@
-# Python bytecode and caches
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.pytest_cache/
+# Node dependencies & build
+node_modules/
+dist/
+build/
+.npm/
 
-# Environment and OS
-.DS_Store
+# Environment & OS
 .env
-.venv
-env/
-venv/
+.env.local
+.DS_Store
 
-# AI Behavior Lab results (keep directory, ignore bulky runs if desired)
+# AI Behavior Lab run archives (keep results/latest_summary.csv)
 results/runs/
