@@ -4,9 +4,10 @@ import MetricCards from './components/MetricCards.jsx';
 import ComparisonTable from './components/ComparisonTable.jsx';
 import ResponseExplorer from './components/ResponseExplorer.jsx';
 import InteractivePlayground from './components/InteractivePlayground.jsx';
+import PolicyUploader from './components/PolicyUploader.jsx';
 import PolicyViewer from './components/PolicyViewer.jsx';
 
-// Fallback initial benchmark data in case server results are loading
+// Fallback initial benchmark summary
 const DEFAULT_SUMMARY = [
   {
     config_name: 'baseline',
@@ -14,7 +15,7 @@ const DEFAULT_SUMMARY = [
     answerable_accuracy_pct: '80.0',
     unanswerable_accuracy_pct: '0.0',
     adversarial_accuracy_pct: '0.0',
-    avg_latency_seconds: '1.05',
+    avg_latency_seconds: '0.87',
     passed_count: '4',
     total_tests: '12',
   },
@@ -24,14 +25,16 @@ const DEFAULT_SUMMARY = [
     answerable_accuracy_pct: '100.0',
     unanswerable_accuracy_pct: '20.0',
     adversarial_accuracy_pct: '50.0',
-    avg_latency_seconds: '0.70',
+    avg_latency_seconds: '0.61',
     passed_count: '7',
     total_tests: '12',
   },
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('playground'); // Start with the assistant view
+  const [workspaceId, setWorkspaceId] = useState('default');
+  const [activePolicy, setActivePolicy] = useState(null);
   const [health, setHealth] = useState({ alive: true, model: 'qwen2.5:1.5b' });
   const [summary, setSummary] = useState(DEFAULT_SUMMARY);
   const [details, setDetails] = useState([]);
@@ -39,8 +42,9 @@ export default function App() {
 
   useEffect(() => {
     fetchHealth();
+    fetchActivePolicy();
     fetchResults();
-  }, []);
+  }, [workspaceId]);
 
   async function fetchHealth() {
     try {
@@ -48,6 +52,18 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setHealth(data);
+      }
+    } catch {}
+  }
+
+  async function fetchActivePolicy() {
+    try {
+      const res = await fetch(`/api/workspace/policy?workspaceId=${workspaceId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.policy) {
+          setActivePolicy(data.policy);
+        }
       }
     } catch {}
   }
@@ -85,17 +101,39 @@ export default function App() {
     }
   }
 
+  function handlePolicyActivated(newPolicy) {
+    setActivePolicy(newPolicy);
+    // Switch to playground so user can test their newly uploaded policy immediately!
+    setActiveTab('playground');
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         health={health}
+        activePolicy={activePolicy}
         onRunBenchmark={handleRunBenchmark}
         isRunningBenchmark={isRunningBenchmark}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+        {activeTab === 'playground' && (
+          <InteractivePlayground
+            activePolicy={activePolicy}
+            workspaceId={workspaceId}
+          />
+        )}
+
+        {activeTab === 'upload' && (
+          <PolicyUploader
+            activePolicy={activePolicy}
+            workspaceId={workspaceId}
+            onPolicyActivated={handlePolicyActivated}
+          />
+        )}
+
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <MetricCards summary={summary} />
@@ -105,13 +143,11 @@ export default function App() {
 
         {activeTab === 'explorer' && <ResponseExplorer details={details} />}
 
-        {activeTab === 'playground' && <InteractivePlayground />}
-
         {activeTab === 'policy' && <PolicyViewer />}
       </main>
 
       <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400">
-        AI Behavior Lab • Apple M2 Metal Inference • Zero-Budget Startup Prototype
+        AI Behavior Lab • Apple M2 Metal Inference • Client-Policy Grounded Assistant
       </footer>
     </div>
   );

@@ -1,15 +1,16 @@
 import React from 'react';
-import { Play, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
+import { Play, Sparkles, AlertCircle, FileCheck, Upload } from 'lucide-react';
 
 export default function Header({
   activeTab,
   setActiveTab,
   health,
+  activePolicy,
   onRunBenchmark,
   isRunningBenchmark,
 }) {
   return (
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
         {/* Brand */}
         <div className="flex items-center space-x-3">
@@ -20,10 +21,12 @@ export default function Header({
             <div className="flex items-center gap-2">
               <h1 className="font-bold text-lg text-slate-900 tracking-tight">AI Behavior Lab</h1>
               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                React + Node.js
+                Client-Policy Assistant
               </span>
             </div>
-            <p className="text-xs text-slate-500">Measuring Local Model Rule Adherence on Apple M2</p>
+            <p className="text-xs text-slate-500">
+              Active Policy: <strong className="text-slate-800">{activePolicy?.filename || 'Acme Policy v2026.1'}</strong>
+            </p>
           </div>
         </div>
 
@@ -50,6 +53,14 @@ export default function Header({
           </div>
 
           <button
+            onClick={() => setActiveTab('upload')}
+            className="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Upload Policy
+          </button>
+
+          <button
             onClick={onRunBenchmark}
             disabled={isRunningBenchmark}
             className={`text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-sm ${
@@ -74,17 +85,18 @@ export default function Header({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-8 text-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-8 text-sm overflow-x-auto">
         {[
+          { id: 'playground', label: '💬 Policy AI Assistant' },
+          { id: 'upload', label: '📁 Upload & Manage Policy' },
           { id: 'overview', label: '📊 Benchmark Overview' },
           { id: 'explorer', label: '🔍 Response Explorer' },
-          { id: 'playground', label: '💬 Interactive Playground' },
-          { id: 'policy', label: '📜 Policy Reference' },
+          { id: 'policy', label: '📜 Acme Policy Reference' },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`py-2.5 px-1 font-medium transition-colors border-b-2 ${
+            className={`py-2.5 px-1 font-medium whitespace-nowrap transition-colors border-b-2 ${
               activeTab === tab.id
                 ? 'border-blue-600 text-blue-600 font-semibold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'

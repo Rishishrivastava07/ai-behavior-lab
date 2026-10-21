@@ -1,6 +1,6 @@
 /**
- * AI Behavior Lab - Local API Server (Zero Dependencies, Node 20 Native HTTP).
- * Serves API endpoints for Ollama queries, benchmark runs, and the React frontend.
+ * AI Behavior Lab - Local API Server (Node 20 Native HTTP).
+ * Supports Client-Policy Uploads, Isolated Workspaces, Local RAG, and Benchmark Runner.
  */
 import fs from 'node:fs';
 import http from 'node:http';
@@ -13,10 +13,13 @@ import {
   PORT,
   RESULTS_DIR,
   RULE_FOLLOWING_SYSTEM_PROMPT,
-  loadPolicy,
+  loadPolicy as loadDefaultAcmePolicy,
 } from './config.js';
+import { DocumentParser } from './documentParser.js';
 import { OllamaClient } from './ollamaClient.js';
+import { RAGAssistant } from './rag/ragAssistant.js';
 import { BenchmarkRunner } from './runner.js';
+import { WorkspaceManager, WORKSPACES_DIR } from './workspaceManager.js';
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -97,9 +100,11 @@ function parseCsvRow(rowStr) {
 
 export function createServer() {
   const client = new OllamaClient();
+  const workspaceManager = new WorkspaceManager();
+  const ragAssistant = new RAGAssistant({ client });
 
   const server = http.createServer(async (req, res) => {
-    // CORS preflight
+    // CORS Preflight
     if (req.method === 'OPTIONS') {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',
@@ -112,8 +117,9 @@ export function createServer() {
 
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;
+    const searchParams = parsedUrl.searchParams;
 
-    // API: Health & Status
+    // 1. API: Health & Status
     if (pathname === '/api/health' && req.method === 'GET') {
       const isAlive = await client.checkConnection();
       let models = [];
@@ -133,12 +139,119 @@ export function createServer() {
       });
     }
 
-    // API: Policy Text
-    if (pathname === '/api/policy' && req.method === 'GET') {
-      return sendJson(res, { policy: loadPolicy() });
+    // 2. API: Workspace List
+    if (pathname === '/api/workspaces' && req.method === 'GET') {
+      const workspaces = workspaceManager.listWorkspaces();
+      return sendJson(res, { workspaces });
     }
 
-    // API: Test Cases
+    // 3. API: Get Workspace Policy
+    if (pathname === '/api/workspace/policy' && req.method === 'GET') {
+      const workspaceId = searchParams.get('workspaceId') || 'default';
+      const info = workspaceManager.getWorkspaceInfo(workspaceId);
+      return sendJson(res, info);
+    }
+
+    // 4. API: Upload Preview (Parses PDF or TXT without saving)
+    if (pathname === '/api/upload-preview' && req.method === 'POST') {
+      try {
+        const body = await parseBody(req);
+        const filename = body.filename || 'document.txt';
+        let buffer;
+
+        if (body.base64Data) {
+          buffer = Buffer.from(body.base64Data, 'base64');
+        } else if (body.text) {
+          buffer = Buffer.from(body.text, 'utf-8');
+        } else {
+          return sendJson(res, { error: 'No document data provided.' }, 400);
+        }
+
+        const previewResult = await DocumentParser.parse({ buffer, filename });
+        return sendJson(res, { success: true, preview: previewResult });
+      } catch (err) {
+        return sendJson(res, { success: false, error: err.message, code: err.code || 'PARSE_ERROR' }, 400);
+      }
+    }
+
+    // 5. API: Activate Policy in Workspace
+    if (pathname === '/api/workspace/activate-policy' && req.method === 'POST') {
+      try {
+        const body = await parseBody(req);
+        const workspaceId = body.workspaceId || 'default';
+        const { filename, text, charCount, wordCount } = body;
+
+        if (!text || !text.trim()) {
+          return sendJson(res, { error: 'Policy text cannot be empty.' }, 400);
+        }
+
+        const policy = workspaceManager.savePolicy(workspaceId, {
+          filename,
+          text,
+          charCount,
+          wordCount,
+        });
+
+        return sendJson(res, { success: true, policy });
+      } catch (err) {
+        return sendJson(res, { success: false, error: err.message }, 500);
+      }
+    }
+
+    // 6. API: Reset Policy in Workspace
+    if (pathname === '/api/workspace/reset-policy' && req.method === 'POST') {
+      try {
+        const body = await parseBody(req);
+        const workspaceId = body.workspaceId || 'default';
+        const policy = workspaceManager.resetPolicy(workspaceId);
+        return sendJson(res, { success: true, policy });
+      } catch (err) {
+        return sendJson(res, { success: false, error: err.message }, 500);
+      }
+    }
+
+    // 7. API: Grounded RAG Query against Active Workspace Policy
+    if (pathname === '/api/workspace/query' && req.method === 'POST') {
+      try {
+        const body = await parseBody(req);
+        const workspaceId = body.workspaceId || 'default';
+        const question = (body.question || '').trim();
+        const topK = body.topK ? Number(body.topK) : 3;
+
+        if (!question) {
+          return sendJson(res, { error: 'Question cannot be empty.' }, 400);
+        }
+
+        const info = workspaceManager.getWorkspaceInfo(workspaceId);
+        const policyText = info.policy?.text || '';
+
+        const ragResult = await ragAssistant.answer({
+          question,
+          policyText,
+          topK,
+        });
+
+        return sendJson(res, {
+          question,
+          workspaceId,
+          policyName: info.policy?.filename || 'Policy Document',
+          answer: ragResult.answer,
+          sources: ragResult.sources,
+          isRefusal: ragResult.isRefusal,
+          latencySeconds: ragResult.latencySeconds,
+          error: ragResult.error,
+        });
+      } catch (err) {
+        return sendJson(res, { error: err.message }, 500);
+      }
+    }
+
+    // 8. API: Legacy Policy Text (for Acme reference tab)
+    if (pathname === '/api/policy' && req.method === 'GET') {
+      return sendJson(res, { policy: loadDefaultAcmePolicy() });
+    }
+
+    // 9. API: Test Cases
     if (pathname === '/api/test-cases' && req.method === 'GET') {
       try {
         const raw = fs.readFileSync(DATA_PATH, 'utf-8');
@@ -148,7 +261,7 @@ export function createServer() {
       }
     }
 
-    // API: Latest Results
+    // 10. API: Benchmark Results
     if (pathname === '/api/results' && req.method === 'GET') {
       try {
         const summaryPath = path.join(RESULTS_DIR, 'latest_summary.csv');
@@ -157,7 +270,6 @@ export function createServer() {
           summary = parseCsv(fs.readFileSync(summaryPath, 'utf-8'));
         }
 
-        // Find the newest details CSV file in results/runs/
         const runsDir = path.join(RESULTS_DIR, 'runs');
         let details = [];
         if (fs.existsSync(runsDir)) {
@@ -179,57 +291,7 @@ export function createServer() {
       }
     }
 
-    // API: Live Question Query (Baseline vs Rule-Following)
-    if (pathname === '/api/query' && req.method === 'POST') {
-      try {
-        const body = await parseBody(req);
-        const question = (body.question || '').trim();
-        if (!question) {
-          return sendJson(res, { error: 'Empty question provided' }, 400);
-        }
-
-        const policyText = loadPolicy();
-        const baseSys = BASELINE_SYSTEM_PROMPT(policyText);
-        const ruleSys = RULE_FOLLOWING_SYSTEM_PROMPT(policyText);
-
-        const [respBaseline, respRule] = await Promise.all([
-          client.chat({
-            model: DEFAULT_MODEL,
-            messages: [
-              { role: 'system', content: baseSys },
-              { role: 'user', content: question },
-            ],
-            temperature: 0.0,
-          }),
-          client.chat({
-            model: DEFAULT_MODEL,
-            messages: [
-              { role: 'system', content: ruleSys },
-              { role: 'user', content: question },
-            ],
-            temperature: 0.0,
-          }),
-        ]);
-
-        return sendJson(res, {
-          question,
-          baseline: {
-            content: respBaseline.content,
-            latency: respBaseline.latencySeconds,
-            error: respBaseline.error,
-          },
-          ruleFollowing: {
-            content: respRule.content,
-            latency: respRule.latencySeconds,
-            error: respRule.error,
-          },
-        });
-      } catch (err) {
-        return sendJson(res, { error: err.message }, 500);
-      }
-    }
-
-    // API: Trigger Benchmark Run
+    // 11. API: Trigger Benchmark Run
     if (pathname === '/api/run-benchmark' && req.method === 'POST') {
       try {
         const body = await parseBody(req);
@@ -246,7 +308,7 @@ export function createServer() {
       }
     }
 
-    // Serve Static React Build from client/dist (if built)
+    // 12. Serve Static React Build from client/dist (if built)
     if (fs.existsSync(CLIENT_DIST)) {
       let filePath = path.join(CLIENT_DIST, pathname === '/' ? 'index.html' : pathname);
       if (!fs.existsSync(filePath)) {
@@ -264,14 +326,13 @@ export function createServer() {
       } catch {}
     }
 
-    // Fallback info if client/dist is not yet built
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`
       <html>
         <body style="font-family: sans-serif; padding: 40px; text-align: center;">
           <h2>AI Behavior Lab Server is Active</h2>
           <p>Ollama is connected at <code>${client.baseUrl}</code></p>
-          <p>React client is ready to be launched or built.</p>
+          <p>Client Policy RAG and Benchmark APIs are ready.</p>
         </body>
       </html>
     `);
@@ -284,10 +345,11 @@ if (process.argv[1] && process.argv[1].endsWith('server.js')) {
   const server = createServer();
   server.listen(PORT, () => {
     console.log('\n' + '='.repeat(65));
-    console.log('🌐 AI BEHAVIOR LAB - NODE.JS API SERVER');
+    console.log('🌐 AI BEHAVIOR LAB - CLIENT-POLICY ASSISTANT & BENCHMARK SERVER');
     console.log('='.repeat(65));
     console.log(`👉 Server Running: http://localhost:${PORT}`);
     console.log(`📡 Connected to:   Ollama at http://127.0.0.1:11434`);
+    console.log(`📂 Workspaces at:  ${WORKSPACES_DIR}`);
     console.log('🛑 Press Ctrl + C to stop.');
     console.log('='.repeat(65) + '\n');
   });
