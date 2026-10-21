@@ -81,19 +81,15 @@ Execute the full evaluation suite:
 python3 run_benchmark.py
 ```
 
-Optional flags:
+### 4. Launch the Interactive Web Dashboard
+You can visualize and interact with everything in your browser:
 ```bash
-# Run a quick smoke test on the first 3 test cases:
-python3 run_benchmark.py --max-cases 3
-
-# Test with a different local model:
-python3 run_benchmark.py --model llama3.2:1b
-
-# Adjust sampling temperature (default: 0.0 for deterministic evaluation):
-python3 run_benchmark.py --temperature 0.2
+python3 serve_web.py
 ```
+Then open `http://localhost:8000` to view executive metrics, explore side-by-side AI responses, and test custom prompts live!
+*(Or double-click `web/index.html` to view the standalone dashboard immediately without running a server).*
 
-### 4. Run Automated Unit Tests
+### 5. Run Automated Unit Tests
 To verify the evaluator's rule-checking heuristics:
 ```bash
 python3 -m unittest discover -s tests -v
