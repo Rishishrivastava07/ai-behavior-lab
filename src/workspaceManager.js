@@ -87,20 +87,23 @@ export class WorkspaceManager {
       } catch {}
     }
 
-    // Fall back to default policy if custom workspace has no policy yet
-    const defaultText = loadDefaultAcmePolicy();
-    return {
-      id: workspaceId,
-      policy: {
-        id: workspaceId,
-        filename: 'Acme_Innovations_Policy_v2026.1.md',
-        isDefault: true,
-        uploadedAt: new Date().toISOString(),
-        charCount: defaultText.length,
-        wordCount: defaultText.split(/\s+/).filter(Boolean).length,
-        text: defaultText,
-      },
-    };
+    // No policy file found for this workspace.
+    // For the default workspace this should not happen (ensured in constructor),
+    // but for a custom workspace that has no uploaded policy we return null
+    // so the frontend can show a clear "no policy loaded" state.
+    // We deliberately do NOT fall back to the Acme policy for a different workspace.
+    if (workspaceId === 'default') {
+      // Default workspace should always have a policy — reinitialise it
+      this._ensureDefaultWorkspace();
+      const policyFile2 = path.join(dir, 'policy.json');
+      if (fs.existsSync(policyFile2)) {
+        try {
+          const policy = JSON.parse(fs.readFileSync(policyFile2, 'utf-8'));
+          return { id: workspaceId, policy };
+        } catch {}
+      }
+    }
+    return { id: workspaceId, policy: null };
   }
 
   savePolicy(workspaceId = 'default', { filename, text, charCount, wordCount }) {

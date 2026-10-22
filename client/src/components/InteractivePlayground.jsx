@@ -105,7 +105,10 @@ export default function InteractivePlayground({ activePolicy, workspaceId = 'def
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Grounding answers in: <strong className="text-slate-800">{activePolicy?.filename || 'Acme Policy v2026.1'}</strong>
+              Grounding answers in:{' '}
+              <strong className="text-slate-800">
+                {activePolicy?.filename || 'No policy loaded'}
+              </strong>
             </p>
           </div>
 

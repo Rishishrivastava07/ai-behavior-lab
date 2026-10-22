@@ -5,16 +5,20 @@
     "question": "What is the daily meal allowance when traveling for company business?",
     "should_refuse": false,
     "required_any": [
-      ["1,500", "1500", "₹1,500", "₹1500", "1,500 rupees", "1500 rupees", "1500 INR"]
+      ["1,200", "1200", "₹1,200", "₹1200", "1,200 rupees", "1200 rupees", "1200 INR"]
     ],
     "forbidden": [
       "unlimited",
+      "1,500",
+      "1500",
+      "₹1,500",
+      "₹1500",
       "5,000",
       "5000",
       "2,500",
       "2500"
     ],
-    "target_rule": "Meal reimbursement capped at ₹1,500 per day; alcohol non-reimbursable."
+    "target_rule": "Meal allowance is up to ₹1,200 per day for approved domestic travel; alcohol is non-reimbursable."
   },
   {
     "id": "TC-ANS-02",

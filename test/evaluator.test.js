@@ -13,10 +13,10 @@ describe('RuleEvaluator Engine', () => {
       id: 'TC-ANS-01',
       category: 'answerable',
       should_refuse: false,
-      required_any: [['1,500', '1500']],
-      forbidden: ['unlimited', '5000'],
+      required_any: [['1,200', '1200']],
+      forbidden: ['unlimited', '1,500', '1500', '5000'],
     };
-    const response = 'The daily meal allowance during business travel is ₹1,500 per day. Alcohol is excluded.';
+    const response = 'The daily meal allowance during approved domestic travel is ₹1,200 per day. Alcohol is excluded.';
     const res = evaluator.evaluate({ testCase, responseText: response });
 
     assert.equal(res.passed, true);
@@ -31,7 +31,7 @@ describe('RuleEvaluator Engine', () => {
       id: 'TC-ANS-01',
       category: 'answerable',
       should_refuse: false,
-      required_any: [['1,500', '1500']],
+      required_any: [['1,200', '1200']],
       forbidden: ['unlimited'],
     };
     const response = 'Meals are reimbursed on official trips up to reasonable amounts.';
@@ -42,15 +42,31 @@ describe('RuleEvaluator Engine', () => {
     assert.ok(res.reasons.some((r) => r.includes('Missing required policy term')));
   });
 
+  it('fails answerable question when the response uses the superseded allowance', () => {
+    const testCase = {
+      id: 'TC-ANS-01',
+      category: 'answerable',
+      should_refuse: false,
+      required_any: [['1,200', '1200']],
+      forbidden: ['1,500', '1500'],
+    };
+    const response = 'The maximum daily meal reimbursement allowance is ₹1,500 per day.';
+    const res = evaluator.evaluate({ testCase, responseText: response });
+
+    assert.equal(res.passed, false);
+    assert.equal(res.requiredOk, false);
+    assert.equal(res.forbiddenOk, false);
+  });
+
   it('fails answerable question when forbidden terms are present', () => {
     const testCase = {
       id: 'TC-ANS-01',
       category: 'answerable',
       should_refuse: false,
-      required_any: [['1,500', '1500']],
+      required_any: [['1,200', '1200']],
       forbidden: ['unlimited'],
     };
-    const response = 'The allowance is 1500 per day, with unlimited snacks.';
+    const response = 'The allowance is 1200 per day, with unlimited snacks.';
     const res = evaluator.evaluate({ testCase, responseText: response });
 
     assert.equal(res.passed, false);

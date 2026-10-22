@@ -55,7 +55,7 @@ export default function ResponseExplorer({ details = [], activePolicy }) {
                 Benchmark Grounding Document:
               </span>
               <span className="text-xs font-bold text-slate-900">
-                {activePolicy?.filename || 'Acme_Innovations_Policy_v2026.1.md'}
+                {activePolicy?.filename || 'No policy loaded'}
               </span>
               {activePolicy?.isDefault ? (
                 <span className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
@@ -68,7 +68,7 @@ export default function ResponseExplorer({ details = [], activePolicy }) {
               )}
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              Side-by-side behavioral adherence log of Baseline vs Rule-Following configurations.
+              Side-by-side behavioral adherence log for the currently active policy.
             </p>
           </div>
         </div>
@@ -116,6 +116,15 @@ export default function ResponseExplorer({ details = [], activePolicy }) {
 
       {/* Cards List */}
       <div className="space-y-4">
+        {filteredCases.length === 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+            <FileText className="w-9 h-9 mx-auto text-slate-400 mb-3" />
+            <h3 className="font-semibold text-slate-800">No benchmark responses for this policy</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Run the benchmark to generate questions and answers for the active policy.
+            </p>
+          </div>
+        )}
         {filteredCases.map((item) => {
           const catBadgeClass =
             item.category === 'answerable'

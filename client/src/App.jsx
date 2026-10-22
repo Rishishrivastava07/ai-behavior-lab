@@ -43,8 +43,12 @@ export default function App() {
   useEffect(() => {
     fetchHealth();
     fetchActivePolicy();
-    fetchResults();
+    setDetails([]);
   }, [workspaceId]);
+
+  useEffect(() => {
+    fetchResults();
+  }, []);
 
   async function fetchHealth() {
     try {
@@ -61,9 +65,7 @@ export default function App() {
       const res = await fetch(`/api/workspace/policy?workspaceId=${workspaceId}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.policy) {
-          setActivePolicy(data.policy);
-        }
+        setActivePolicy(data.policy || null);
       }
     } catch {}
   }
@@ -73,12 +75,8 @@ export default function App() {
       const res = await fetch('/api/results');
       if (res.ok) {
         const data = await res.json();
-        if (data.summary && data.summary.length > 0) {
-          setSummary(data.summary);
-        }
-        if (data.details && data.details.length > 0) {
-          setDetails(data.details);
-        }
+        setSummary(data.summary?.length ? data.summary : DEFAULT_SUMMARY);
+        setDetails(data.details || []);
       }
     } catch {}
   }
@@ -89,7 +87,7 @@ export default function App() {
       const res = await fetch('/api/run-benchmark', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ workspaceId }),
       });
       if (res.ok) {
         await fetchResults();
@@ -101,10 +99,28 @@ export default function App() {
     }
   }
 
-  function handlePolicyActivated(newPolicy) {
+  async function handlePolicyActivated(newPolicy) {
     setActivePolicy(newPolicy);
+    // Benchmark records belong to the policy used for that run. Do not show
+    // the previous policy's questions and answers after a new upload.
+    setDetails([]);
     // Switch to playground so user can test their newly uploaded policy immediately!
     setActiveTab('playground');
+
+    // Regenerate explorer data against the newly active document. Results from
+    // the prior policy must never be presented as if they were current.
+    try {
+      const res = await fetch('/api/run-benchmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId }),
+      });
+      if (res.ok) {
+        await fetchResults();
+      }
+    } catch (err) {
+      console.error('Failed to refresh policy benchmark:', err);
+    }
   }
 
   return (
@@ -141,7 +157,13 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'explorer' && <ResponseExplorer details={details} activePolicy={activePolicy} />}
+        {activeTab === 'explorer' && (
+          <ResponseExplorer
+            key={activePolicy?.uploadedAt || 'no-policy'}
+            details={details}
+            activePolicy={activePolicy}
+          />
+        )}
 
         {activeTab === 'policy' && (
           <PolicyViewer
@@ -154,7 +176,10 @@ export default function App() {
                   body: JSON.stringify({ workspaceId }),
                 });
                 const data = await res.json();
-                if (data.success) setActivePolicy(data.policy);
+                if (data.success) {
+                  setActivePolicy(data.policy);
+                  setDetails([]);
+                }
               } catch (err) {
                 console.error('Reset policy failed:', err);
               }

@@ -17,13 +17,14 @@ export class BenchmarkRunner {
     modelName = DEFAULT_MODEL,
     temperature = 0.0,
     baseUrl,
+    policyText = null,
   } = {}) {
     this.modelName = modelName;
     this.temperature = temperature;
     this.client = new OllamaClient(baseUrl);
     this.evaluator = new RuleEvaluator();
     this.exporter = new ResultExporter();
-    this.policyText = loadPolicy();
+    this.policyText = policyText || loadPolicy();
   }
 
   async verifyPrerequisites() {

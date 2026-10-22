@@ -5,7 +5,7 @@
 - Employees are permitted a maximum of two (2) remote work days per week, subject to prior written approval from their direct manager.
 
 ## 2. Travel & Expense Reimbursement
-- **Meal Allowance:** The maximum daily meal reimbursement allowance during official business travel is ₹1,500 per day. Alcohol expenses are strictly non-reimbursable.
+- **Meal Allowance:** The maximum daily meal reimbursement allowance during official business travel is ₹1,200 per day. Alcohol expenses are strictly non-reimbursable.
 - **Flight Bookings:** All domestic business travel must be booked in Economy class. Business class travel on domestic flights is strictly prohibited regardless of seniority.
 - **Submission Deadline:** All expense claims must be submitted in the expense portal within fourteen (14) calendar days of expenditure, accompanied by itemized tax/GST invoices. Claims submitted after 14 days will be rejected automatically.
 

@@ -149,7 +149,12 @@ export function createServer() {
     if (pathname === '/api/workspace/policy' && req.method === 'GET') {
       const workspaceId = searchParams.get('workspaceId') || 'default';
       const info = workspaceManager.getWorkspaceInfo(workspaceId);
-      return sendJson(res, info);
+      // policy may be null for a custom workspace with no uploaded policy
+      return sendJson(res, {
+        id: info.id,
+        policy: info.policy,
+        hasPolicy: info.policy !== null,
+      });
     }
 
     // 4. API: Upload Preview (Parses PDF or TXT without saving)
@@ -234,10 +239,11 @@ export function createServer() {
         return sendJson(res, {
           question,
           workspaceId,
-          policyName: info.policy?.filename || 'Policy Document',
+          policyName: info.policy?.filename || null,
           answer: ragResult.answer,
           sources: ragResult.sources,
           isRefusal: ragResult.isRefusal,
+          status: ragResult.status,
           latencySeconds: ragResult.latencySeconds,
           error: ragResult.error,
         });
@@ -296,11 +302,24 @@ export function createServer() {
       try {
         const body = await parseBody(req);
         const maxCases = body.maxCases ? Number(body.maxCases) : null;
-        const runner = new BenchmarkRunner();
+        const workspaceId = body.workspaceId || 'default';
+        const workspaceInfo = workspaceManager.getWorkspaceInfo(workspaceId);
+        if (!workspaceInfo.policy?.text) {
+          return sendJson(res, {
+            success: false,
+            error: 'No policy document is currently active in this workspace.',
+            code: 'NO_POLICY_ACTIVE',
+          }, 400);
+        }
+        const runner = new BenchmarkRunner({
+          policyText: workspaceInfo.policy.text,
+        });
         const runResult = await runner.run({ maxCases });
         return sendJson(res, {
           success: true,
           runId: runResult.runId,
+          workspaceId,
+          policyName: workspaceInfo.policy.filename,
           exportPaths: runResult.exportPaths,
         });
       } catch (err) {

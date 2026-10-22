@@ -12,7 +12,19 @@ import {
 export default function PolicyViewer({ activePolicy, onResetToDefault }) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isDefault = activePolicy?.isDefault ?? true;
+  if (!activePolicy) {
+    return (
+      <div className="bg-white rounded-xl border border-amber-200 p-8 shadow-sm text-center">
+        <FileText className="w-10 h-10 mx-auto text-amber-500 mb-3" />
+        <h2 className="font-bold text-slate-900 text-lg">No policy loaded</h2>
+        <p className="text-sm text-slate-600 mt-2">
+          Upload a policy document to this workspace before asking grounded questions.
+        </p>
+      </div>
+    );
+  }
+
+  const isDefault = activePolicy.isDefault;
   const filename = activePolicy?.filename || 'Acme_Innovations_Policy_v2026.1.md';
   const fullText = activePolicy?.text || '';
   const charCount = activePolicy?.charCount || fullText.length;
