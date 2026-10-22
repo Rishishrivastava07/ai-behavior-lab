@@ -91,7 +91,18 @@ export default function Header({
           { id: 'upload', label: '📁 Upload & Manage Policy' },
           { id: 'overview', label: '📊 Benchmark Overview' },
           { id: 'explorer', label: '🔍 Response Explorer' },
-          { id: 'policy', label: '📜 Acme Policy Reference' },
+          {
+            id: 'policy',
+            label: activePolicy?.isDefault
+              ? '📜 Policy Reference (Acme)'
+              : `📜 Policy: ${
+                  activePolicy?.filename
+                    ? activePolicy.filename.length > 22
+                      ? activePolicy.filename.slice(0, 19) + '...'
+                      : activePolicy.filename
+                    : 'Active Policy'
+                }`,
+          },
         ].map((tab) => (
           <button
             key={tab.id}

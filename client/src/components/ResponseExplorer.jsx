@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
 
-export default function ResponseExplorer({ details = [] }) {
+export default function ResponseExplorer({ details = [], activePolicy }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -43,6 +43,37 @@ export default function ResponseExplorer({ details = [] }) {
 
   return (
     <div className="space-y-6">
+      {/* Active Policy Context Banner */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Benchmark Grounding Document:
+              </span>
+              <span className="text-xs font-bold text-slate-900">
+                {activePolicy?.filename || 'Acme_Innovations_Policy_v2026.1.md'}
+              </span>
+              {activePolicy?.isDefault ? (
+                <span className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
+                  Default Benchmark Policy
+                </span>
+              ) : (
+                <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium border border-emerald-200">
+                  Active Uploaded Policy
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Side-by-side behavioral adherence log of Baseline vs Rule-Following configurations.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
         {/* Category Buttons */}

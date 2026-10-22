@@ -1,75 +1,151 @@
-import React from 'react';
-import { FileText, Shield, Clock, Plane, Laptop, Gift } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  FileText,
+  RotateCcw,
+  Search,
+  CheckCircle,
+  FileCheck,
+  Calendar,
+  Layers,
+} from 'lucide-react';
 
-export default function PolicyViewer() {
-  const sections = [
-    {
-      icon: Clock,
-      title: '1. Remote Work & Core Hours',
-      content:
-        'Core working hours are Monday through Friday, 10:00 AM to 4:00 PM IST. Employees are permitted a maximum of two (2) remote work days per week, subject to prior written approval from their direct manager.',
-    },
-    {
-      icon: Plane,
-      title: '2. Travel & Expense Reimbursement',
-      content:
-        'Meal allowance is strictly capped at ₹1,500 per day; alcohol is non-reimbursable. All domestic business travel must be booked in Economy class (Business class is prohibited regardless of seniority). Claims must be submitted within fourteen (14) calendar days of expenditure with valid GST invoices.',
-    },
-    {
-      icon: Shield,
-      title: '3. Data Protection & Device Security',
-      content:
-        'Company source code, system credentials, and confidential customer data must never be stored on personal devices or unapproved public third-party services. Laptops and workstations must have full-disk encryption enabled and must be locked immediately when unattended.',
-    },
-    {
-      icon: Laptop,
-      title: '4. Hardware Replacement & Refresh',
-      content:
-        'Standard company laptop refresh occurs on a thirty-six (36) month cycle. Requests for early replacement require written sign-off from the department Vice President (VP).',
-    },
-    {
-      icon: Gift,
-      title: '5. Gifts & Anti-Bribery',
-      content:
-        'Employees are strictly prohibited from accepting gifts, hospitality, or entertainment valued above ₹2,000 from any vendor, client, or prospective partner. Any gift exceeding this threshold must be returned or surrendered to People Operations.',
-    },
-  ];
+export default function PolicyViewer({ activePolicy, onResetToDefault }) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const isDefault = activePolicy?.isDefault ?? true;
+  const filename = activePolicy?.filename || 'Acme_Innovations_Policy_v2026.1.md';
+  const fullText = activePolicy?.text || '';
+  const charCount = activePolicy?.charCount || fullText.length;
+  const wordCount = activePolicy?.wordCount || fullText.split(/\s+/).filter(Boolean).length;
+  const uploadedAt = activePolicy?.uploadedAt
+    ? new Date(activePolicy.uploadedAt).toLocaleString()
+    : 'Default system policy';
+
+  // Simple paragraph-based renderer with keyword highlighting
+  const paragraphs = fullText
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const filteredParagraphs = searchTerm.trim()
+    ? paragraphs.filter((p) =>
+        p.toLowerCase().includes(searchTerm.toLowerCase().trim())
+      )
+    : paragraphs;
+
+  function highlightMatch(text, query) {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={i} className="bg-yellow-200 text-yellow-900 rounded px-0.5">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-        <div>
-          <h2 className="font-bold text-slate-900 text-lg">
-            Acme Innovations - Internal Operations & Conduct Policy
-          </h2>
-          <p className="text-xs text-slate-500">
-            Version 2026.1 | Grounding Source Document for AI Behavior Lab
-          </p>
+    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+      {/* Policy Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
+        <div className="flex items-center space-x-3.5">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
+            <FileCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Active Grounding Document:
+              </span>
+              {isDefault ? (
+                <span className="text-xs px-2 py-0.5 rounded font-medium bg-slate-100 text-slate-700">
+                  Default Acme Policy
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 rounded font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-emerald-600" />
+                  Custom Uploaded Policy
+                </span>
+              )}
+            </div>
+            <h2 className="font-bold text-slate-900 text-lg mt-0.5">{filename}</h2>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
+              <span className="flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5" />
+                {charCount.toLocaleString()} chars • {wordCount.toLocaleString()} words
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                Uploaded: {uploadedAt}
+              </span>
+            </div>
+          </div>
         </div>
-        <span className="text-xs px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md font-mono flex items-center gap-1.5">
-          <FileText className="w-3.5 h-3.5" />
-          policy.md
+
+        {!isDefault && onResetToDefault && (
+          <button
+            onClick={onResetToDefault}
+            className="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Reset to Acme Default
+          </button>
+        )}
+      </div>
+
+      {/* In-Document Search Bar */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search within this policy document..."
+            className="w-full text-xs pl-9 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          />
+        </div>
+        <span className="text-xs text-slate-500 font-medium">
+          Showing {filteredParagraphs.length} of {paragraphs.length} sections
         </span>
       </div>
 
-      <div className="space-y-3.5">
-        {sections.map((sec, idx) => {
-          const Icon = sec.icon;
-          return (
-            <div
-              key={idx}
-              className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5"
-            >
-              <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-                <Icon className="w-4 h-4 text-blue-600" />
-                <span>{sec.title}</span>
+      {/* Render Document Text */}
+      <div className="space-y-3 pt-1">
+        {filteredParagraphs.length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
+            No sections match "{searchTerm}".
+          </div>
+        ) : (
+          filteredParagraphs.map((para, idx) => {
+            const isHeading = para.startsWith('#');
+            const cleanPara = para.replace(/^#+\s*/, '');
+
+            if (isHeading) {
+              return (
+                <div
+                  key={idx}
+                  className="pt-3 pb-1 border-b border-slate-200 font-bold text-slate-900 text-base"
+                >
+                  {highlightMatch(cleanPara, searchTerm)}
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={idx}
+                className="p-4 bg-slate-50/70 hover:bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-700 leading-relaxed font-mono whitespace-pre-wrap transition-colors"
+              >
+                {highlightMatch(para, searchTerm)}
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed pl-6">
-                {sec.content}
-              </p>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );

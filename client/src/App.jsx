@@ -141,9 +141,26 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'explorer' && <ResponseExplorer details={details} />}
+        {activeTab === 'explorer' && <ResponseExplorer details={details} activePolicy={activePolicy} />}
 
-        {activeTab === 'policy' && <PolicyViewer />}
+        {activeTab === 'policy' && (
+          <PolicyViewer
+            activePolicy={activePolicy}
+            onResetToDefault={async () => {
+              try {
+                const res = await fetch('/api/workspace/reset-policy', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ workspaceId }),
+                });
+                const data = await res.json();
+                if (data.success) setActivePolicy(data.policy);
+              } catch (err) {
+                console.error('Reset policy failed:', err);
+              }
+            }}
+          />
+        )}
       </main>
 
       <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400">
